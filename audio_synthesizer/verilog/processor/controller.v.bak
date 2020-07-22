@@ -1,0 +1,325 @@
+module controller (input clk,
+                   input reset,
+                   input posedge_sample_clock,
+                   input note_is_last,
+                   input osc_choice_is_noise,
+                   input event_key_press,
+                   input event_key_release,
+                   input event_increase,
+                   input event_decrease,
+                   input event_menu_change,
+                   output reg en_previous_sample_clock,
+                   output reg en_note,
+                   output reg en_note_on,
+                   output reg en_note_phase,
+                   output reg en_note_duration,
+                   output reg en_osc_choice,
+                   output reg en_osc_noise,
+                   output reg en_filter_f,
+                   output reg en_filter_q,
+                   output reg en_filter_choice,
+                   output reg en_filter,
+                   output reg en_key_freq,
+                   output reg en_mix,
+                   output reg s_previous_sample_clock,
+                   output reg [1:0] s_note,
+                   output reg s_note_on,
+                   output reg s_note_phase,
+                   output reg s_note_duration,
+                   output reg s_osc_choice,
+                   output reg s_osc_noise,
+                   output reg [1:0] s_osc_out,
+                   output reg [2:0] s_ram_raddr,
+                   output reg [2:0] s_ram_waddr,
+                   output reg [2:0] s_ram_dout,
+                   output reg s_filter_f,
+                   output reg s_filter_q,
+                   output reg s_filter_choice,
+                   output reg s_filter,
+                   output reg s_clear_evt,
+                   output reg s_mix,
+                   output reg en_ram_w,
+                   output reg [5:0] state);
+    
+    parameter INIT                 = 5'd0;
+    parameter WAIT                 = 5'd1;
+    parameter OSC_READ_CHOICE_0    = 5'd2;
+    parameter OSC_READ_CHOICE_1    = 5'd3;
+    parameter OSC_ADVANCE_PHASE    = 5'd4;
+    parameter OSC_LOOKUP_0         = 5'd5;
+    parameter OSC_LOOKUP_1         = 5'd6;
+    parameter OSC_NOISE_OUT_0      = 5'd7;
+    parameter OSC_NOISE_OUT_1      = 5'd8;
+    parameter FILTER_READ_F_0      = 5'd9;
+    parameter FILTER_READ_F_1      = 5'd10;
+    parameter FILTER_READ_Q_0      = 5'd11;
+    parameter FILTER_READ_Q_1      = 5'd12;
+    parameter FILTER_READ_CHOICE_0 = 5'd13;
+    parameter FILTER_READ_CHOICE_1 = 5'd14;
+    parameter FILTER               = 5'd15;
+    parameter EVT_KEY_PRESS_0      = 5'd16;
+    parameter EVT_KEY_PRESS_1      = 5'd17;
+    parameter EVT_KEY_PRESS_2      = 5'd18;
+    parameter EVT_KEY_PRESS_3      = 5'd19;
+    parameter EVT_KEY_RELEASE_0    = 5'd20;
+    parameter EVT_KEY_RELEASE_1    = 5'd21;
+    parameter NOTE_READ_START      = 5'd22;
+    parameter NOTE_READ_0          = 5'd23;
+    parameter NOTE_READ_1          = 5'd24;
+    parameter NOTE_READ_2          = 5'd25;
+    parameter NOTE_WRITE_0         = 5'd26;
+    parameter NOTE_WRITE_1         = 5'd27;
+    parameter MIX                  = 5'd28;
+    
+    reg [5:0] next_state;
+    
+    always @(posedge clk)
+        if (reset)
+            state <= INIT;
+        else
+            state <= next_state;
+    
+    always @(*) begin
+        en_previous_sample_clock = 0;
+        en_note                  = 0;
+        en_note                  = 0;
+        en_note_phase            = 0;
+        en_note_duration         = 0;
+        en_osc_choice            = 0;
+        en_osc_noise             = 0;
+        en_filter_f              = 0;
+        en_filter_q              = 0;
+        en_filter_choice         = 0;
+        en_filter                = 0;
+        en_key_freq              = 0;
+        en_mix                   = 0;
+        
+        s_previous_sample_clock = 0;
+        s_note                  = 0;
+        s_note_on               = 0;
+        s_note_phase            = 0;
+        s_note_duration         = 0;
+        s_osc_choice            = 0;
+        s_osc_noise             = 0;
+        s_osc_out               = 0;
+        s_ram_raddr             = 0;
+        s_ram_waddr             = 0;
+        s_ram_dout              = 0;
+        s_filter_f              = 0;
+        s_filter_q              = 0;
+        s_filter_choice         = 0;
+        s_filter                = 0;
+        s_clear_evt             = 0;
+        s_mix                   = 0;
+
+        en_ram_w = 0;
+        
+        next_state = INIT;
+        
+        case (state)
+            INIT: begin
+                en_previous_sample_clock = 1;
+                en_note                  = 1;
+                en_note                  = 1;
+                en_note_phase            = 1;
+                en_note_duration         = 1;
+                en_osc_choice            = 1;
+                en_osc_noise             = 1;
+                en_filter_f              = 1;
+                en_filter_q              = 1;
+                en_filter_choice         = 1;
+                en_filter                = 1;
+                en_key_freq              = 1;
+                en_mix                   = 1;
+                
+                next_state = WAIT;
+            end
+            WAIT: begin
+                en_previous_sample_clock = 1;
+                s_previous_sample_clock  = 1;
+
+                if (posedge_sample_clock)
+                    next_state = OSC_READ_CHOICE_0;
+                else if (event_key_press)
+                    next_state = EVT_KEY_PRESS_0;
+                else if (event_key_release)
+                    next_state = EVT_KEY_RELEASE_0;
+                else if (event_increase | event_decrease | event_menu_change)
+                    next_state = WAIT;
+                else
+                    next_state = WAIT;
+            end
+            EVT_KEY_PRESS_0: begin
+                s_clear_evt = 1; // clear on next clock
+                
+                en_note = 1; // load note on next clock
+                s_note  = 1; // load note from evt
+                
+                next_state = EVT_KEY_PRESS_1;
+            end
+            EVT_KEY_PRESS_1: begin
+                en_ram_w    = 1; // write to ram on next clock
+                s_ram_waddr = 4; // write to note_on array
+                s_ram_dout  = 1;  // write value 1
+                
+                next_state = EVT_KEY_PRESS_2;
+            end
+            EVT_KEY_PRESS_2: begin
+                en_ram_w    = 1; // write to ram on next clock
+                s_ram_waddr = 5; // write to note_phase array
+                s_ram_dout  = 0;  // write value 0
+                
+                next_state = EVT_KEY_PRESS_3;
+            end
+            EVT_KEY_PRESS_3: begin
+                en_ram_w    = 1; // write to ram on next clock
+                s_ram_waddr = 4; // write to note_duration array
+                s_ram_dout  = 0;  // write value 0
+                
+                next_state = WAIT;
+            end
+            EVT_KEY_RELEASE_0: begin
+                s_clear_evt = 1; // clear on next clock
+                
+                en_note = 1; // load note on next clock
+                s_note  = 1; // load note from evt
+                
+                next_state = EVT_KEY_RELEASE_1;
+            end
+            EVT_KEY_RELEASE_1: begin
+                
+                en_ram_w    = 1; // write to ram on next clock
+                s_ram_waddr = 4; // write to note_on array
+                s_ram_dout  = 0;  // write value 0
+                
+                next_state = WAIT;
+            end
+            OSC_READ_CHOICE_0: begin
+                s_ram_raddr = 3;
+
+                next_state  = OSC_READ_CHOICE_1;
+            end
+            OSC_READ_CHOICE_1: begin
+                en_osc_choice = 1;
+                s_osc_choice  = 1;
+
+                next_state    = NOTE_READ_START;
+            end
+            NOTE_READ_START: begin
+                en_note = 1; // reset note on next clock
+                s_note  = 0; // reset note iterator
+                
+                en_mix = 1; // reset audio mix on next clock
+                s_mix  = 0; // reset audio mix
+                
+                next_state = NOTE_READ_0;
+            end
+            NOTE_READ_0: begin
+                s_ram_raddr = 4; // read from note_on array
+                en_note_on  = 1; // read note_on on next clock
+                s_note_on   = 1; // read from ram din
+                
+                next_state = NOTE_READ_1;
+            end
+            NOTE_READ_1: begin
+                s_ram_raddr   = 5; // read from note_phase array
+                en_note_phase = 1; // read note_phase on next clock
+                s_note_phase  = 1; // read from ram din
+                
+                next_state = NOTE_READ_2;
+            end
+            NOTE_READ_2: begin
+                s_ram_raddr      = 6; // read from note_duration array
+                en_note_duration = 1; // read note_duration on next clock
+                s_note_duration  = 1; // read from ram din
+                
+                if (osc_choice_is_noise)
+                    next_state = OSC_NOISE_OUT_0;
+                else
+                    next_state = OSC_LOOKUP_0;
+            end
+            OSC_LOOKUP_0: begin
+                next_state = OSC_LOOKUP_1;
+            end
+            OSC_LOOKUP_1: begin
+                s_osc_out  = 1;
+
+                next_state = FILTER_READ_F_0;
+            end
+            OSC_NOISE_OUT_0: begin
+                en_osc_noise = 1;
+                s_osc_noise  = 1;
+
+                next_state   = OSC_NOISE_OUT_1;
+            end
+            OSC_NOISE_OUT_1: begin
+                s_osc_out  = 2;
+
+                next_state = FILTER_READ_F_0;
+            end
+            FILTER_READ_F_0: begin
+                s_ram_raddr = 0;
+
+                next_state  = FILTER_READ_F_1;
+            end
+            FILTER_READ_F_1: begin
+                en_filter_f = 1;
+                s_filter_f  = 1;
+
+                next_state  = FILTER_READ_Q_0;
+            end
+            FILTER_READ_Q_0: begin
+                s_ram_raddr = 1;
+
+                next_state  = FILTER_READ_Q_1;
+            end
+            FILTER_READ_Q_1: begin
+                en_filter_q = 1;
+                s_filter_q  = 1;
+
+                next_state  = FILTER_READ_CHOICE_0;
+            end
+            FILTER_READ_CHOICE_0: begin
+                s_ram_raddr = 2;
+
+                next_state  = FILTER_READ_CHOICE_1;
+            end
+            FILTER_READ_CHOICE_1: begin
+                en_filter_choice = 1;
+                s_filter_choice  = 1;
+
+                next_state       = FILTER;
+            end
+            FILTER: begin
+                en_filter  = 1;
+                s_filter   = 1;
+
+                next_state = MIX;
+            end
+            MIX: begin
+                en_mix = 1; // add to mix on next clock
+                s_mix  = 1; // add to mix
+                
+                next_state = NOTE_WRITE_0;
+            end
+            NOTE_WRITE_0: begin
+                s_ram_waddr = 5; // write to note_phase array
+                s_ram_dout  = 6; // write next_phase
+                
+                next_state = NOTE_WRITE_1;
+            end
+            NOTE_WRITE_1: begin
+                s_ram_waddr = 6; // write to note_duration array
+                s_ram_dout  = 7; // write next_duration
+                
+                en_note = 1; // increment note on next clock
+                s_note  = 2; // increment note
+                
+                if (note_is_last)
+                    next_state = WAIT;
+                else
+                    next_state = NOTE_READ_0;
+            end
+        endcase
+    end
+endmodule

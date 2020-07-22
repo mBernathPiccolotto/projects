@@ -1,0 +1,77 @@
+module vga_adapter(input [7:0] x,
+                   input [6:0] y,
+                   input [31:0] ram_dout,
+                   output reg [7:0] ram_raddr,
+                   output reg [2:0] color);
+    
+    localparam NOTE_ON_START_ADDRESS  = 8'd4;
+    localparam OUT_HIST_START_ADDRESS = NOTE_ON_START_ADDRESS + 8'd48;
+    localparam BLACK                  = 3'h0;
+    
+    reg [7:0] x_piano;
+    reg [6:0] y_piano;
+    
+    wire is_key_playing;
+    wire [4:0] key_requested0, key_requested1;
+    wire [2:0] color_piano0, color_piano1;
+
+    wire [7:0] wave_requested;
+    wire [2:0] wave_color;
+	wire [5:0] wave_amplitude;
+
+    assign is_key_playing = ram_dout[0];
+	assign wave_amplitude = ram_dout[28:23];
+
+    piano_graphics piano0(
+        .x(x_piano),
+        .y(y_piano),
+        .is_key_playing(is_key_playing),
+        .key_requested(key_requested0),
+        .color(color_piano0)
+    );
+
+    piano_graphics piano1(
+        .x(x_piano),
+        .y(y_piano),
+        .is_key_playing(is_key_playing),
+        .key_requested(key_requested1),
+        .color(color_piano1)
+    );
+
+    vga_wave_visualization vga_wave_visualization(
+        .x(x),
+        .y(y),
+        .wave_amplitude(wave_amplitude),
+        .wave_requested(wave_requested),
+        .color(wave_color)
+    );
+    
+    always @(*)
+        if (y >= 60) begin
+            if (x >= 3 & x < 79) begin
+                x_piano   = x - 8'd3;
+                y_piano   = y - 7'd60;
+                ram_raddr = NOTE_ON_START_ADDRESS + {3'h0, key_requested0};
+                color     = color_piano0;
+            end
+            else if (x >= 80 & x < 157) begin
+                x_piano   = x - 8'd80;
+                y_piano   = y - 7'd60;
+                ram_raddr = NOTE_ON_START_ADDRESS + {3'h0, key_requested1} + 8'd12;
+                color     = color_piano1;
+            end
+            else begin
+                x_piano   = 8'd0;
+                y_piano   = 7'd0;
+                ram_raddr = 8'd0;
+                color     = BLACK;
+            end
+        end
+        else begin
+			x_piano   = 8'd0;
+            y_piano   = 7'd0;
+            ram_raddr = OUT_HIST_START_ADDRESS + wave_requested;
+            color     = wave_color;
+        end
+    
+endmodule

@@ -1,0 +1,66 @@
+module piano_graphics(input [6:0] x,                 // betwwen 0 and 76
+                      input [5:0] y,                 // between 0 and 59
+                      input is_key_playing,          // whether key in key_requested is playing
+                      output reg [4:0] key_requested, // key to be checked
+                      output [2:0] color);           // color of pixel (x, y)
+    
+    parameter BLACK = 3'h0;
+    parameter RED   = 3'h4;
+    parameter WHITE = 3'h7;
+    
+    wire is_top;
+    wire [11:0] is_in_key;
+    reg [2:0] default_color;
+    
+    assign is_top = y <= 39;
+    
+    assign is_in_key[0]  = (x >= 0 & x <= 10 & ~is_top) | (x >= 0 & x <= 6);
+    assign is_in_key[1]  = x >= 7 & x <= 15 & is_top;
+    assign is_in_key[2]  = (x >= 12 & x <= 21 & ~is_top) | (x >= 16 & x <= 17);
+    assign is_in_key[3]  = x >= 18 & x <= 26 & is_top;
+    assign is_in_key[4]  = (x >= 23 & x <= 32 & ~is_top) | (x >= 27 & x <= 32);
+    assign is_in_key[5]  = (x >= 34 & x <= 43 & ~is_top) | (x >= 34 & x <= 39);
+    assign is_in_key[6]  = x >= 40 & x <= 48 & is_top;
+    assign is_in_key[7]  = (x >= 45 & x <= 54 & ~is_top) | (x >= 49 & x <= 50);
+    assign is_in_key[8]  = x >= 51 & x <= 59 & is_top;
+    assign is_in_key[9]  = (x >= 56 & x <= 65 & ~is_top) | (x >= 60 & x <= 61);
+    assign is_in_key[10] = x >= 62 & x <= 70 & is_top;
+    assign is_in_key[11] = (x >= 67 & x <= 76 & ~is_top) | (x >= 71 & x <= 76);
+    
+    always @(*)
+        if (is_in_key[0] | is_in_key[2] | is_in_key[4] | is_in_key[5] | is_in_key[7] | is_in_key[9] | is_in_key[11])
+            default_color = WHITE;
+        else
+            default_color = BLACK;
+    
+    always @(*)
+        if (is_in_key[0])
+            key_requested = 5'd0;
+        else if (is_in_key[1])
+            key_requested = 5'd1;
+        else if (is_in_key[2])
+            key_requested = 5'd2;
+        else if (is_in_key[3])
+            key_requested = 5'd3;
+        else if (is_in_key[4])
+            key_requested = 5'd4;
+        else if (is_in_key[5])
+            key_requested = 5'd5;
+        else if (is_in_key[6])
+            key_requested = 5'd6;
+        else if (is_in_key[7])
+            key_requested = 5'd7;
+        else if (is_in_key[8])
+            key_requested = 5'd8;
+        else if (is_in_key[9])
+            key_requested = 5'd9;
+        else if (is_in_key[10])
+            key_requested = 5'd10;
+        else if (is_in_key[11])
+            key_requested = 5'd11;
+        else
+            key_requested = 5'd12;
+    
+    assign color = (|is_in_key & is_key_playing) ? RED : default_color;
+
+endmodule

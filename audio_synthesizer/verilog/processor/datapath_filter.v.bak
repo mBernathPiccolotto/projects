@@ -1,0 +1,140 @@
+// module datapath_filter (input clk,                     // 50 MHz clock
+//                         input en_filter,
+//                         input s_filter,
+//                         input signed [31:0] in,        // Input signal
+//                         input signed [31:0] filter_f,  // Filter parameter f
+//                         input signed [31:0] filter_q,  // Filter parameter q
+//                         input [1:0] filter_choice,     // Which filter to output (lowpass, highpass, bandpass, bandreject)
+//                         output reg signed [31:0] out); // Output signal after filtering
+    
+//     /***************************************************************************
+//      * Parameter Declarations *
+//      ***************************************************************************/
+    
+//     // Filter choices
+//     localparam FILTER_CHOICE_ON  = 0;
+//     localparam FILTER_CHOICE_OFF = 1;
+
+//     // TODO: temporary
+//     localparam LOGALPHA = 4;
+
+//     /***************************************************************************
+//      * Internal Wire and Register Declarations *
+//      ***************************************************************************/
+    
+//     reg signed [32:0] filtered_out;
+    
+//     /***************************************************************************
+//      * Sequential Logic *
+//      ***************************************************************************/
+    
+//     always @(posedge clk)
+//         if (en_filter)
+//             if (s_filter)
+//                 filtered_out <= (filtered_out + ({in[31], in} - filtered_out) >>> filter_q) >> 1; 
+//             else
+//                 filtered_out <= 0;
+    
+//     /***************************************************************************
+//      * Combinational Logic *
+//      ***************************************************************************/
+
+//     always @(*)
+//         case (filter_choice)
+//             FILTER_CHOICE_ON:   out = filtered_out;
+//             FILTER_CHOICE_OFF:  out = in;
+//             default:            out = in;
+//         endcase
+    
+// endmodule
+
+module datapath_filter (input clk,                     // 50 MHz clock
+                        input en_filter,
+                        input s_filter,
+                        input signed [31:0] in,        // Input signal
+                        input signed [31:0] filter_f,  // Filter parameter f
+                        input signed [31:0] filter_q,  // Filter parameter q
+                        input [1:0] filter_choice,     // Which filter to output (lowpass, highpass, bandpass, bandreject)
+                        output reg signed [31:0] out); // Output signal after filtering
+
+    /***************************************************************************
+     * Parameter Declarations *
+     ***************************************************************************/
+
+    // Filter choices
+    localparam FILTER_CHOICE_LOWPASS     = 0;
+    localparam FILTER_CHOICE_HIGHPASS    = 1;
+    localparam FILTER_CHOICE_BANDPASS    = 2;
+    localparam FILTER_CHOICE_BAND_REJECT = 3;
+
+    // Fixed point limits
+    localparam signed [69:0] MAX = 36'h07FFFFFFF; // 2**31 - 1
+    localparam signed [69:0] MIN = 36'hF80000000; // -2**31
+
+    /***************************************************************************
+     * Function Declarations *
+     ***************************************************************************/
+
+    // Extend 32 bit to 70 bit
+    `define EXT(x) ({x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31], x[31:0]})
+
+    // Fix overflows
+    `define CLIP(x) (x > MAX ? MAX : x < MIN ? MIN : x[31:0])
+
+    // Q2.30 multiplication
+    `define QMULT(a, b) ((a * b) >> 30)
+
+    /***************************************************************************
+     * Internal Wire and Register Declarations *
+     ***************************************************************************/
+
+    // 36 bit signed integers, so we can account for:
+    // - 2 bits from multiplication of signed 32 bit integer by Q2.30 unsigned fixed-point
+    // - 2 bit from addition to other 34-bit numbers
+    wire signed [69:0] ext_in;
+    wire signed [69:0] ext_filter_f;
+    wire signed [69:0] ext_filter_q;
+    wire signed [69:0] highpass;
+    wire signed [69:0] bandpass;
+    wire signed [69:0] lowpass;
+    wire signed [69:0] band_reject;
+    reg signed [69:0] filter_temp_0;
+    reg signed [69:0] filter_temp_1;
+
+    /***************************************************************************
+     * Sequential Logic *
+     ***************************************************************************/
+
+    always @(posedge clk)
+        if (en_filter)
+            if (s_filter) begin
+                filter_temp_0 <= bandpass;
+                filter_temp_1 <= lowpass;
+            end
+            else begin
+                filter_temp_0 <= 0;
+                filter_temp_1 <= 0;
+            end
+
+    /***************************************************************************
+     * Combinational Logic *
+     ***************************************************************************/
+
+    assign ext_in      = `EXT(in); // extend to 36-bit
+    assign highpass    = ext_in - `QMULT(filter_temp_0, ext_filter_q) - lowpass;
+    assign bandpass    = `QMULT(highpass, ext_filter_f) + filter_temp_0;
+    assign lowpass     = `QMULT(filter_temp_0, ext_filter_f) + filter_temp_1;
+    assign band_reject = lowpass + highpass;
+
+    // assign out = `CLIP(highpass);
+
+    always @(*)
+        case (filter_choice)
+            FILTER_CHOICE_LOWPASS:     out = `CLIP(lowpass);
+            FILTER_CHOICE_HIGHPASS:    out = `CLIP(highpass);
+            FILTER_CHOICE_BANDPASS:    out = `CLIP(bandpass);
+            // FILTER_CHOICE_BAND_REJECT: out = `CLIP(band_reject);
+            default: out = in;
+        endcase
+
+endmodule

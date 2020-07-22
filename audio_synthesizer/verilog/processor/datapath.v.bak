@@ -1,0 +1,280 @@
+module datapath(input clk,                      // 50 MHz clock
+                input sample_clock,             // DAC sample clock
+                input [7:0] evt,                // Key input event
+                input [31:0] osc_rom_din,       // Input from oscillator look-up ROM
+                input [31:0] ram_din,           // Input from synthesizer parameters RAM
+                input en_previous_sample_clock,
+                input en_note,
+                input en_note_on,
+                input en_note_phase,
+                input en_note_duration,
+                input en_osc_choice,
+                input en_osc_noise,
+                input en_filter_f,
+                input en_filter_q,
+                input en_filter_choice,
+                input en_filter,
+                input en_key_freq,
+                input en_mix,
+                input s_previous_sample_clock,
+                input [1:0] s_note,
+                input s_note_on,
+                input s_note_phase,
+                input s_note_duration,
+                input s_osc_choice,
+                input s_osc_phase,
+                input s_osc_noise,
+                input [1:0] s_osc_out,
+                input [2:0] s_ram_raddr,
+                input [2:0] s_ram_waddr,
+                input [2:0] s_ram_dout,
+                input s_filter_f,
+                input s_filter_q,
+                input s_filter_choice,
+                input s_filter,
+                input s_clear_evt,
+                input s_mix,
+                output [9:0] osc_rom_raddr,     // Read address for oscillator look-up ROM
+                output reg [7:0] ram_raddr,     // Read address for synthesizer parameters RAM
+                output reg [7:0] ram_waddr,     // Write address for synthesizer parameters RAM
+                output reg [31:0] ram_dout,     // Write data to ram
+                output clear_evt,               // Indicates that event has been processed
+                output signed [31:0] out,       // Output signal after processing
+                output posedge_sample_clock,    // True if sample clock changed from 0 to 1 in this clock
+                output note_is_last,
+                output osc_choice_is_noise,
+                output event_key_press,
+                output event_key_release,
+                output event_increase,
+                output event_decrease,
+                output event_menu_change);
+    
+    /***************************************************************************
+     * Parameter Declarations *
+     ***************************************************************************/
+    
+    // Ram addresses
+    localparam F_RAM_ADDRESS               = 0;
+    localparam Q_RAM_ADDRESS               = 1;
+    localparam FILTER_CHOICE_ADDRESS       = 2;
+    localparam OSC_CHOICE_ADDRESS          = 3;
+    localparam NOTE_ON_START_ADDRESS       = 4;
+    localparam NOTE_PHASE_START_ADDRESS    = NOTE_ON_START_ADDRESS + 24;
+    localparam NOTE_DURATION_START_ADDRESS = NOTE_PHASE_START_ADDRESS + 24;
+    
+    // Event types
+    localparam EVT_INVALID     = 3'h0;
+    localparam EVT_PRESS_KEY   = 3'h1;
+    localparam EVT_RELEASE_KEY = 3'h2;
+    localparam EVT_INCREASE    = 3'h3;
+    localparam EVT_DECREASE    = 3'h4;
+    localparam EVT_CHANGE_MENU = 3'h5;
+    
+    // Filter choices
+    localparam FILTER_CHOICE_HIGHPASS    = 0;
+    localparam FILTER_CHOICE_LOWPASS     = 1;
+    localparam FILTER_CHOICE_BANDPASS    = 2;
+    localparam FILTER_CHOICE_BAND_REJECT = 3;
+    
+    // Choice constant
+    localparam OSC_CHOICE_NOISE = 4;
+    
+    /***************************************************************************
+     * Internal Wire and Register Declarations *
+     ***************************************************************************/
+    
+    reg previous_sample_clock;
+    
+    // From 0 to 23
+    reg [4:0] note;
+    reg note_on;
+    reg [31:0] note_phase, note_duration;
+    wire [31:0] next_note_phase, next_note_duration;
+    
+    // From 0 to 4
+    reg [2:0] osc_choice;
+    // 32 bit signed integers
+    wire signed [31:0] osc_out;
+    wire signed [31:0] filter_out;
+
+    // 37 bit to account for adding all keys (ceil(log2(24)) = 5)
+    wire signed [36:0] filter_out_ext;
+    reg signed [36:0] out_mix;
+    
+    // 32 bit signed integers
+    reg signed [31:0] filter_f;
+    reg signed [31:0] filter_q;
+    // From 0 to 3
+    reg [1:0] filter_choice;
+    
+    /***************************************************************************
+     * Sequential Logic *
+     ***************************************************************************/
+    
+    // Sample clock posedge detection
+    always @(posedge clk)
+        if (en_previous_sample_clock)
+            if (s_previous_sample_clock)
+                previous_sample_clock <= sample_clock;
+            else
+                previous_sample_clock <= 0;
+    
+    // Note loading and iteration
+    always @(posedge clk)
+        if (en_note)
+            case (s_note)
+                2'd0: note    <= 0;
+                2'd1: note    <= evt[4:0];
+                2'd2: note    <= note + 1;
+                default: note <= 0;
+            endcase
+    
+    // Output mixing
+    always @(posedge clk)
+        if (en_mix)
+            if (s_mix)
+                out_mix <= out_mix + filter_out;
+            else
+                out_mix <= 0;
+    
+    // Reading from memory to datapath registers
+    always @(posedge clk)
+        if (en_filter_f)
+            if (s_filter_f)
+                filter_f <= ram_din;
+            else
+                filter_f <= 0;
+    
+    always @(posedge clk)
+        if (en_filter_q)
+            if (s_filter_q)
+                filter_q <= ram_din;
+            else
+                filter_q <= 0;
+    
+    always @(posedge clk)
+        if (en_filter_choice)
+            if (s_filter_choice)
+                filter_choice <= ram_din;
+            else
+                filter_choice <= 0;
+    
+    always @(posedge clk)
+        if (en_osc_choice)
+            if (s_osc_choice)
+                osc_choice <= ram_din;
+            else
+                osc_choice <= 0;
+    
+    always @(posedge clk)
+        if (en_note_on)
+            if (s_note_on)
+                note_on <= ram_din;
+            else
+                note_on <= 0;
+    
+    always @(posedge clk)
+        if (en_note_phase)
+            if (s_note_phase)
+                note_phase <= ram_din;
+            else
+                note_phase <= 0;
+    
+    always @(posedge clk)
+        if (en_note_duration)
+            if (s_note_duration)
+                note_duration <= ram_din;
+            else
+                note_duration <= 0;
+    
+    // Oscillator logic
+    datapath_oscillator datapath_oscillator(
+    .clk(clk),
+    .note(note),
+    .note_phase(note_phase),
+    .osc_choice(osc_choice),
+    .osc_rom_din(osc_rom_din),
+    .en_osc_noise(en_osc_noise),
+    .s_osc_noise(s_osc_noise),
+    .s_osc_out(s_osc_out),
+    .next_note_phase(next_note_phase),
+    .osc_rom_raddr(osc_rom_raddr),
+    .osc_choice_is_noise(osc_choice_is_noise),
+    .out(osc_out)
+    );
+    
+    // Filter logic
+    datapath_filter datapath_filter(
+    .clk(clk),
+    .en_filter(en_filter),
+    .s_filter(s_filter),
+    .in(osc_out),
+    .filter_f(filter_f),
+    .filter_q(filter_q),
+    .filter_choice(filter_choice),
+    .out(filter_out)
+    );
+    
+    /***************************************************************************
+     * Combinational Logic *
+     ***************************************************************************/
+    
+    // Sample clock posedge flag
+    assign posedge_sample_clock = !previous_sample_clock && sample_clock;
+    
+    // Last note
+    assign note_is_last = (note == 5'd23);
+    
+    // Memory access
+    always @(*)
+        case (s_ram_raddr)
+            0: ram_raddr       = F_RAM_ADDRESS;
+            1: ram_raddr       = Q_RAM_ADDRESS;
+            2: ram_raddr       = FILTER_CHOICE_ADDRESS;
+            3: ram_raddr       = OSC_CHOICE_ADDRESS;
+            4: ram_raddr       = NOTE_ON_START_ADDRESS + note;
+            5: ram_raddr       = NOTE_PHASE_START_ADDRESS + note;
+            6: ram_raddr       = NOTE_DURATION_START_ADDRESS + note;
+            default: ram_raddr = 0;
+        endcase
+    
+    always @(*)
+        case (s_ram_waddr)
+            0: ram_waddr       = F_RAM_ADDRESS;
+            1: ram_waddr       = Q_RAM_ADDRESS;
+            2: ram_waddr       = FILTER_CHOICE_ADDRESS;
+            3: ram_waddr       = OSC_CHOICE_ADDRESS;
+            4: ram_waddr       = NOTE_ON_START_ADDRESS + note;
+            5: ram_waddr       = NOTE_PHASE_START_ADDRESS + note;
+            6: ram_waddr       = NOTE_DURATION_START_ADDRESS + note;
+            default: ram_waddr = 0;
+        endcase
+    
+    always @(*)
+        case (s_ram_dout)
+            0: ram_dout       = 0;
+            1: ram_dout       = 1;
+            2: ram_dout       = filter_f;
+            3: ram_dout       = filter_q;
+            4: ram_dout       = filter_choice;
+            5: ram_dout       = osc_choice;
+            6: ram_dout       = next_note_phase;
+            7: ram_dout       = next_note_duration;
+            default: ram_dout = 0;
+        endcase
+    
+    // Flags testing for keypress events
+    assign event_key_press   = evt[7:5] == datapath.EVT_PRESS_KEY;
+    assign event_key_release = evt[7:5] == datapath.EVT_RELEASE_KEY;
+    assign event_increase    = evt[7:5] == datapath.EVT_INCREASE;
+    assign event_decrease    = evt[7:5] == datapath.EVT_DECREASE;
+    assign event_menu_change = evt[7:5] == datapath.EVT_CHANGE_MENU;
+    
+    // Audio mixing
+    assign filter_out_ext = {filter_out[31], filter_out[31], filter_out[31], filter_out[31], filter_out[31], filter_out[31:0]};
+    assign out = out_sum / 24;
+
+    // Event logic
+    assign clear_evt = s_clear_evt;
+    
+endmodule

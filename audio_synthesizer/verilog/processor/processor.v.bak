@@ -1,0 +1,188 @@
+module processor (input clk,                  // 50 MHz clock
+                  input reset,                // Reset
+                  input sample_clock,         // DAC sample clock
+                  input [7:0] evt,            // Key input event
+                  input [31:0] ram_dout,
+                  input [31:0] osc_rom_dout,
+                  output [7:0] ram_raddr,
+                  output [7:0] ram_waddr,
+                  output [31:0] ram_din,
+                  output ram_wen,
+                  output [9:0] osc_rom_raddr,
+                  output clear_evt,           // Signal that event has been acknowledged and should be cleared from buffer
+                  output [31:0] out);         // Output signal after processing
+    
+    wire posedge_sample_clock;
+    wire note_is_last;
+    wire osc_choice_is_noise;
+    wire event_key_press;
+    wire event_key_release;
+    wire event_increase;
+    wire event_decrease;
+    wire event_menu_change;
+    wire current_menu_F(current_menu_F);
+    wire current_menu_Q(current_menu_Q);
+    wire current_menu_FILTER(current_menu_FILTER);
+    wire current_menu_OSC(current_menu_OSC);
+    
+    wire en_previous_sample_clock;
+    wire en_note;
+    wire en_note_on;
+    wire en_note_phase;
+    wire en_note_duration;
+    wire en_osc_choice;
+    wire en_osc_phase;
+    wire en_osc_noise;
+    wire en_osc_out;
+    wire en_filter_f;
+    wire en_filter_q;
+    wire en_filter_choice;
+    wire en_filter;
+    wire en_key_freq;
+    wire en_mix;
+    wire en_mix_out;
+    wire en_menu_choice;
+
+    wire s_menu_choice;
+    wire s_previous_sample_clock;
+    wire [1:0] s_note;
+    wire s_note_on;
+    wire s_note_phase;
+    wire s_note_duration;
+    wire s_osc_choice;
+    wire s_osc_noise;
+    wire [1:0] s_osc_out;
+    wire [2:0] s_ram_raddr;
+    wire [2:0] s_ram_waddr;
+    wire [2:0] s_ram_din;
+    wire s_filter_f;
+    wire s_filter_q;
+    wire s_filter_choice;
+    wire s_filter;
+    wire s_clear_evt;
+    wire s_mix;
+    wire s_mix_out;
+    
+    controller controller(
+    .clk(clk),
+    .reset(reset),
+    
+    .posedge_sample_clock(posedge_sample_clock),
+    .note_is_last(note_is_last),
+    .osc_choice_is_noise(osc_choice_is_noise),
+    .event_key_press(event_key_press),
+    .event_key_release(event_key_release),
+    .event_increase(event_increase),
+    .event_decrease(event_decrease),
+    .event_menu_change(event_menu_change),
+    .current_menu_F(current_menu_F),
+    .current_menu_Q(current_menu_Q),
+    .current_menu_FILTER(current_menu_FILTER),
+    .current_menu_OSC(current_menu_OSC),
+    
+    .en_previous_sample_clock(en_previous_sample_clock),
+    .en_note(en_note),
+    .en_note_on(en_note_on),
+    .en_note_phase(en_note_phase),
+    .en_note_duration(en_note_duration),
+    .en_osc_choice(en_osc_choice),
+    .en_osc_noise(en_osc_noise),
+    .en_osc_out(en_osc_out),
+    .en_filter_f(en_filter_f),
+    .en_filter_q(en_filter_q),
+    .en_filter_choice(en_filter_choice),
+    .en_filter(en_filter),
+    .en_key_freq(en_key_freq),
+    .en_mix(en_mix),
+    .en_mix_out(en_mix_out),
+    .en_menu_choice(en_menu_choice),
+    
+    .s_menu_choice(s_menu_choice),
+    .s_previous_sample_clock(s_previous_sample_clock),
+    .s_note(s_note),
+    .s_note_on(s_note_on),
+    .s_note_phase(s_note_phase),
+    .s_note_duration(s_note_duration),
+    .s_osc_choice(s_osc_choice),
+    .s_osc_noise(s_osc_noise),
+    .s_osc_out(s_osc_out),
+    .s_ram_raddr(s_ram_raddr),
+    .s_ram_waddr(s_ram_waddr),
+    .s_ram_din(s_ram_din),
+    .s_filter_f(s_filter_f),
+    .s_filter_q(s_filter_q),
+    .s_filter_choice(s_filter_choice),
+    .s_filter(s_filter),
+    .s_clear_evt(s_clear_evt),
+    .s_mix(s_mix),
+    .s_mix_out(s_mix_out),
+    
+    .en_ram_w(ram_wen)
+    );
+    
+    datapath datapath(
+    .clk(clk),
+    .sample_clock(sample_clock),
+    .evt(evt),
+    .osc_rom_dout(osc_rom_dout),
+    .ram_dout(ram_dout),
+    
+    .en_previous_sample_clock(en_previous_sample_clock),
+    .en_note(en_note),
+    .en_note_on(en_note_on),
+    .en_note_phase(en_note_phase),
+    .en_note_duration(en_note_duration),
+    .en_osc_choice(en_osc_choice),
+    .en_osc_noise(en_osc_noise),
+    .en_osc_out(en_osc_out),
+    .en_filter_f(en_filter_f),
+    .en_filter_q(en_filter_q),
+    .en_filter_choice(en_filter_choice),
+    .en_filter(en_filter),
+    .en_key_freq(en_key_freq),
+    .en_mix(en_mix),
+    .en_mix_out(en_mix_out),
+    .en_menu_choice(en_menu_choice),
+    
+    .s_menu_choice(s_menu_choice),
+    .s_previous_sample_clock(s_previous_sample_clock),
+    .s_note(s_note),
+    .s_note_on(s_note_on),
+    .s_note_phase(s_note_phase),
+    .s_note_duration(s_note_duration),
+    .s_osc_choice(s_osc_choice),
+    .s_osc_noise(s_osc_noise),
+    .s_osc_out(s_osc_out),
+    .s_ram_raddr(s_ram_raddr),
+    .s_ram_waddr(s_ram_waddr),
+    .s_ram_din(s_ram_din),
+    .s_filter_f(s_filter_f),
+    .s_filter_q(s_filter_q),
+    .s_filter_choice(s_filter_choice),
+    .s_filter(s_filter),
+    .s_clear_evt(s_clear_evt),
+    .s_mix(s_mix),
+    .s_mix_out(s_mix_out),
+    
+    .osc_rom_raddr(osc_rom_raddr),
+    .ram_raddr(ram_raddr),
+    .ram_waddr(ram_waddr),
+    .ram_din(ram_din),
+    .clear_evt(clear_evt),
+    .out(out),
+    
+    .posedge_sample_clock(posedge_sample_clock),
+    .note_is_last(note_is_last),
+    .osc_choice_is_noise(osc_choice_is_noise),
+    .event_key_press(event_key_press),
+    .event_key_release(event_key_release),
+    .event_increase(event_increase),
+    .event_decrease(event_decrease),
+    .event_menu_change(event_menu_change),
+    .current_menu_F(current_menu_F),
+    .current_menu_Q(current_menu_Q),
+    .current_menu_FILTER(current_menu_FILTER),
+    .current_menu_OSC(current_menu_OSC)
+    );
+    
+endmodule
