@@ -1,4 +1,4 @@
-# Enigma
+# Audio Synthesizer
 
 ## Description
 
