@@ -1,6 +1,6 @@
 # projects
 
-## Audio Synthesiser
+## Audio Synthesizer
 2019 - Verilog with a bit of python to help with secondary tasks
 
 ## Chrome Game
