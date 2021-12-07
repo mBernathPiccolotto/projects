@@ -15,11 +15,5 @@
 ## Password Cracker
 2020 - Pyhton
 
-## RPN Calculator
-2020 - Pyhton
-
-## Uniq Pyhton
-2020 - Pyhton
-
 ## Vocal Tutor
 2019 - Matlab
