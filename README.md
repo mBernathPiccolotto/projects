@@ -1,6 +1,6 @@
 # projects
 
-## Economics Research Assit
+## Economics Research Assist
 2020 - Python
 
 ## Predicting Individual Annual income
