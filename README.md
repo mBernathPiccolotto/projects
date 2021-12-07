@@ -1,5 +1,11 @@
 # projects
 
+## Economics Research Assit
+2020 - Python
+
+## Predicting Individual Annual income
+2020 - Python
+
 ## Audio Synthesizer
 2019 - Verilog with a bit of python to help with secondary tasks
 
