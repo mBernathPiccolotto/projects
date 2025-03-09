@@ -1,5 +1,8 @@
 # projects
 
+## Custom Java Implementations
+2025 - Java
+
 ## Economics Research Assist
 2020 - Python
 
