@@ -22,9 +22,7 @@ public class Main {
 
        Integer[] intArray = {10, 9, 11, 8, 6, 11};
        heapSortInPlace(intArray);
-        for (Integer i = 0; i < intArray.length; i++) {
-            System.out.println(intArray[i]);
-        }
+       System.out.println(Arrays.toString(intArray));
     }
     
     public Integer[] heapSortInPlace(Integer[] inputArray) {
@@ -41,7 +39,7 @@ public class Main {
     public class MinHeap {
         
         private Integer[] heap;
-        private int heapSize = 12;
+        private int heapSize = 100;
         private int FIRST_INDEX = 1;
         private int nextAvailableSpotIndex = FIRST_INDEX;
 
@@ -51,11 +49,7 @@ public class Main {
         }
         
         public void printHeap() {
-            for (Integer i = 0; i < heapSize; i++) {
-                System.out.println(this.heap[i]);
-            }
-                            System.out.println("------------");
-
+            System.out.println(Arrays.toString(heap));
         }
         
         public MinHeap heapSize(int heapSize) {
@@ -84,7 +78,14 @@ public class Main {
         }
         
         public void put(Integer newAddition) {
-            // Todo what if we are out of space
+            if(this.nextAvailableSpotIndex >= this.heapSize) {
+                Integer[] newHeap = new Integer[heapSize* 2];
+                for (int i = 0; i < heapSize; i++) {
+                    newHeap[i] = this.heap[i];
+                }
+                this.heapSize = this.heapSize * 2;
+                this.heap = newHeap;
+            }
             this.heap[this.nextAvailableSpotIndex] = newAddition;
             this.heapifyUp();
             this.nextAvailableSpotIndex++;
