@@ -1,5 +1,8 @@
 #!/bin/bash
 
+GIT_AUTHOR_NAME="mBernathPiccolotto"
+GIT_COMMITTER_NAME="mBernathPiccolotto"
+
 today=$(date -I)  # Get today's date
 day_of_week=$(date +%u)  # 1 = Monday, 7 = Sunday
 
@@ -16,7 +19,10 @@ echo "Making $num_commits commits for $today"
 for ((i=0; i<num_commits; i++)); do
   echo "Commit $i on $today" > file.txt  # Modify a file
   git add file.txt
-  GIT_AUTHOR_DATE="$today 12:00:00" GIT_COMMITTER_DATE="$today 12:00:00" git commit -m "Commit #$i for $today"
+  GIT_AUTHOR_NAME="$GIT_AUTHOR_NAME" GIT_AUTHOR_EMAIL="$GIT_AUTHOR_EMAIL" \
+  GIT_COMMITTER_NAME="$GIT_COMMITTER_NAME" GIT_COMMITTER_EMAIL="$GIT_COMMITTER_EMAIL" \
+  GIT_AUTHOR_DATE="$today 12:00:00" GIT_COMMITTER_DATE="$today 12:00:00" \
+  git commit -m "Commit #$i for $today"
 done
 
 git push origin main  # Change 'main' if using another branch
