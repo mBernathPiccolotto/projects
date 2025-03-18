@@ -1,5 +1,8 @@
 GIT_COMMITTER_NAME="mBernathPiccolotto"
 GIT_AUTHOR_NAME="mBernathPiccolotto"
+GIT_AUTHOR_EMAIL="68627670+mBernathPiccolotto@users.noreply.github.com"
+GIT_COMMITTER_EMAIL="68627670+mBernathPiccolotto@users.noreply.github.com"
+
 
 start_date="2024-03-17"  # Change this to your desired start date
 end_date=$(date -I)       # Sets end date to today
@@ -29,4 +32,4 @@ while [ "$start_date" != "$end_date" ]; do
   start_date=$(date -I -d "$start_date + 1 day")
 done
 
-git push origin main  # Change 'main' if using another branch
+git push origin master

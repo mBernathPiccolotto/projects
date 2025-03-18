@@ -2,6 +2,8 @@
 
 GIT_AUTHOR_NAME="mBernathPiccolotto"
 GIT_COMMITTER_NAME="mBernathPiccolotto"
+GIT_AUTHOR_EMAIL="68627670+mBernathPiccolotto@users.noreply.github.com"
+GIT_COMMITTER_EMAIL="68627670+mBernathPiccolotto@users.noreply.github.com"
 
 today=$(date -I)  # Get today's date
 day_of_week=$(date +%u)  # 1 = Monday, 7 = Sunday
@@ -25,4 +27,4 @@ for ((i=0; i<num_commits; i++)); do
   git commit -m "Commit #$i for $today"
 done
 
-git push origin main  # Change 'main' if using another branch
+git push origin master
