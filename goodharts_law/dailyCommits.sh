@@ -24,7 +24,7 @@ for ((i=0; i<num_commits; i++)); do
   GIT_AUTHOR_NAME="$GIT_AUTHOR_NAME" GIT_AUTHOR_EMAIL="$GIT_AUTHOR_EMAIL" \
   GIT_COMMITTER_NAME="$GIT_COMMITTER_NAME" GIT_COMMITTER_EMAIL="$GIT_COMMITTER_EMAIL" \
   GIT_AUTHOR_DATE="$today 12:00:00" GIT_COMMITTER_DATE="$today 12:00:00" \
-  git commit -m "Commit #$i for $today"
+  git commit -m "Update Goodhart's Law"
 done
 
 git push origin master
