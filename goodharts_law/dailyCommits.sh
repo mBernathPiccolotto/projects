@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "$(realpath "$0")")"
+
 GIT_AUTHOR_NAME="mBernathPiccolotto"
 GIT_COMMITTER_NAME="mBernathPiccolotto"
 GIT_AUTHOR_EMAIL="68627670+mBernathPiccolotto@users.noreply.github.com"
