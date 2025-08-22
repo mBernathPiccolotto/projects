@@ -20,6 +20,8 @@ fi
 num_commits=$((RANDOM % 10 + 1))  # 1-10 commits
 echo "Making $num_commits commits for $today"
 
+git pull --rebase
+
 for ((i=0; i<num_commits; i++)); do
   echo "Commit $i on $today" > file.txt  # Modify a file
   git add file.txt
